@@ -20,7 +20,7 @@ CSI = b'\x1b['
 MOVE_LEFT  = lambda n: f'\x1b[{n}D'.encode()
 MOVE_RIGHT = lambda n: f'\x1b[{n}C'.encode()
 CLEAR_EOL  = b'\x1b[K'
-CLEAR_SCREEN = "\x1b[2J\x1b[H"  # ANSI: clear screen + home
+CLEAR_SCREEN = "\x1b[2J\x1b[H"
 
 logger = logging.getLogger("chat-server")
 logging.basicConfig(
@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 
 db = DatabaseManager("assets/chat.db")
-clients = []  # list of (reader, writer, username)
+clients = []
 chat_history = []
 clear_offsets = {}
 user_histories = {}
@@ -75,16 +75,16 @@ async def render_screen(writer):
     offset = clear_offsets.get(writer, 0)
     header = f"*** MOTD: {MOTD} ***\r\n--- Chat ---\r\n"
     body = "\r\n".join(chat_history[offset:])
-    # Clear screen, set scrolling region, print MOTD and chat
+
     writer.write(b"\x1b[2J\x1b[1;21r\x1b[1;1H")
     writer.write((header + body).encode())
-    # Separator and prompt
+
     writer.write(b"\x1b[22;1H\x1b[2K-------------------\r\n")
-    writer.write(b"\x1b[23;1H\x1b[2K$~/ ")  # Clear line, write prompt
+    writer.write(b"\x1b[23;1H\x1b[2K$~/ ")
     await writer.drain()
 
 async def redraw_input_line(writer, prompt: bytes, buf, pos):
-    writer.write(b"\x1b[23;1H\x1b[2K")  # Move to line 23, clear line
+    writer.write(b"\x1b[23;1H\x1b[2K")
     writer.write(prompt + b"".join([c.encode() for c in buf]))
     col = len(prompt) + 1 + pos
     writer.write(f"\x1b[23;{col}H".encode())
@@ -105,34 +105,34 @@ async def read_input(reader, writer, prompt_str="$~/ "):
         if not data: continue
         ch = data[0]
 
-        if ch in (13, 10):  # ENTER
+        if ch in (13, 10):
             line = "".join(buf)
             if line:
                 user_histories[writer].append(line)
             user_hist_pos[writer] = len(user_histories[writer])
             return line
 
-        if ch == 27:  # Arrow keys
+        if ch == 27:
             seq = await reader.read(2)
             if seq[:1] == b'[':
                 code = seq[1:2]
-                if code == b'D' and pos > 0:  # Left arrow
+                if code == b'D' and pos > 0: 
                     pos -= 1
                     writer.write(MOVE_LEFT(1))
-                elif code == b'C' and pos < len(buf):  # Right arrow
+                elif code == b'C' and pos < len(buf): 
                     pos += 1
                     writer.write(MOVE_RIGHT(1))
                 await writer.drain()
             continue
 
-        if ch in (127, 8):  # BACKSPACE
+        if ch in (127, 8):
             if pos > 0:
                 buf.pop(pos-1)
                 pos -= 1
                 await redraw_input_line(writer, prompt, buf, pos)
             continue
 
-        if 32 <= ch <= 126 or ch > 127:  # Printable characters
+        if 32 <= ch <= 126 or ch > 127:
             c = chr(ch)
             buf.insert(pos, c)
             pos += 1
@@ -147,12 +147,11 @@ async def handle_command(text: str, username: str, writer):
     if cmd in ("quit", "exit", "q"):
         return "__QUIT__"
     if cmd == "clear":
-        clear_offsets[writer] = len(chat_history)  # Hide history for this user
-        # Fully reset screen for this user
+        clear_offsets[writer] = len(chat_history)
         writer.write(b"\x1b[2J\x1b[1;21r\x1b[1;1H")
         writer.write(f"*** MOTD: {MOTD} ***\r\n--- Chat ---\r\n".encode())
         writer.write(b"\x1b[22;1H\x1b[2K-------------------\r\n")
-        writer.write(b"\x1b[23;1H\x1b[2K$~/ ")  # Clear line, write prompt
+        writer.write(b"\x1b[23;1H\x1b[2K$~/ ")
         await writer.drain()
         return None
     if cmd == "motd":
