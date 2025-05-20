@@ -13,9 +13,9 @@
 
 ## 🔐 Overview
 
-**SockChag** is an open-source, fully encrypted TCP chat platform built with Python. Built for privacy.
+**SockChat** is an open-source, fully encrypted TCP chat platform built with Python. Built for privacy.
 
-> Currently in early **alpha** phase (first 4 pushes). Expect changes, breaks, and lots of caffeine.
+> Currently in early **alpha** phase (first 4 pushes).
 
 ---
 
